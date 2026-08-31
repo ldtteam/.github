@@ -1,10 +1,12 @@
 # Checklist
-- [ ] I have read and accept the [Contributing guidelines](https://github.com/ldtteam/.github/blob/master/CONTRIBUTING.md)
-- [ ] I have tested and confirmed my changes are working on the most recent commit of this pull request
+
 <!--
 When using AI we require you to confirm the points in this [Readme](https://github.com/ldtteam/.github/blob/master/CONTRIBUTING.md#ai-disclosure-policy).
 Please state in which parts of the code AI was used.
 -->
+
+- [ ] I have read and accept the [Contributing guidelines](https://github.com/ldtteam/.github/blob/master/CONTRIBUTING.md)
+- [ ] I have tested and confirmed my changes are working on the most recent commit of this pull request
 - [ ] I have used AI in the creation of this pull request
 
 # Related issues

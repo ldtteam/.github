@@ -1,0 +1,127 @@
+name: PR Template Check
+
+on:
+  workflow_call:
+    inputs:
+      checks:
+        description: >
+          JSON array of { name, regex } objects; regex is matched
+          case-insensitively against each trimmed line of the PR body.
+        required: false
+        type: string
+        default: |
+          [
+            { "name": "Checklist header",
+              "regex": "^#+\\s*Checklist\\s*$" },
+            { "name": "Contributing guidelines checklist item",
+              "regex": "^-\\s*\\[[ xX]*\\]\\s*I have read and accept the \\[Contributing guidelines\\]" },
+            { "name": "Tested changes checklist item",
+              "regex": "^-\\s*\\[[ xX]*\\]\\s*I have tested and confirmed my changes are working on the most recent commit of this pull request$" },
+            { "name": "AI disclosure checklist item",
+              "regex": "^-\\s*\\[[ xX]*\\]\\s*I have used AI in the creation of this pull request" }
+          ]
+      comment:
+        description: Post a comment listing the missing parts on failure.
+        required: false
+        type: boolean
+        default: true
+      template-url:
+        description: Template link shown in the failure comment.
+        required: false
+        type: string
+        default: 'https://github.com/ldtteam/.github/blob/master/.github/PULL_REQUEST_TEMPLATE'
+      comment-body:
+        description: >
+          Failure comment markdown. {{missing}} expands to the failed check
+          names, {{template}} to template-url.
+        required: false
+        type: string
+        default: |
+          ## This pull request was closed automatically
+
+          Its description does not match our [pull request template]({{template}}). The following required parts are missing or were changed:
+
+          {{missing}}
+
+          ### What to do
+
+          1. Open a **new** pull request for the same branch.
+          2. Keep the pull request description exactly as the template provides it. Do not remove the `# Checklist` section or any of its three items.
+          3. Fill in the rest of the template and submit.
+
+          This pull request is locked and will not be reopened. Please do not reply here - open the new pull request instead.
+      close:
+        description: Close the pull request on failure.
+        required: false
+        type: boolean
+        default: true
+      lock:
+        description: Lock the pull request conversation on failure.
+        required: false
+        type: boolean
+        default: true
+      lock-reason:
+        description: "One of: off-topic, too heated, resolved, spam."
+        required: false
+        type: string
+        default: resolved
+
+permissions: {}
+
+jobs:
+  check-template:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Check PR body against template
+        uses: actions/github-script@v7
+        env:
+          CHECKS: ${{ inputs.checks }}
+          COMMENT: ${{ inputs.comment }}
+          COMMENT_BODY: ${{ inputs.comment-body }}
+          TEMPLATE_URL: ${{ inputs.template-url }}
+          CLOSE: ${{ inputs.close }}
+          LOCK: ${{ inputs.lock }}
+          LOCK_REASON: ${{ inputs.lock-reason }}
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            if (!pr) {
+              core.setFailed('This workflow must be called from a pull_request or pull_request_target event.');
+              return;
+            }
+
+            const checks = JSON.parse(process.env.CHECKS).map(c => ({
+              name: c.name,
+              regex: new RegExp(c.regex, 'i'),
+            }));
+
+            const lines = (pr.body || '').split(/\r?\n/).map(l => l.trim());
+            const missing = checks.filter(c => !lines.some(l => c.regex.test(l)));
+            if (missing.length === 0) return;
+
+            core.warning(`PR description is missing: ${missing.map(c => c.name).join('; ')}`);
+
+            const { owner, repo } = context.repo;
+            const issue_number = pr.number;
+
+            if (process.env.COMMENT === 'true') {
+              const list = missing.map(c => `- ${c.name}`).join('\n');
+              const body = process.env.COMMENT_BODY
+                .replaceAll('{{missing}}', list)
+                .replaceAll('{{template}}', process.env.TEMPLATE_URL);
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+            if (process.env.CLOSE === 'true') {
+              await github.rest.pulls.update({ owner, repo, pull_number: issue_number, state: 'closed' });
+            }
+
+            if (process.env.LOCK === 'true') {
+              await github.rest.issues.lock({
+                owner, repo, issue_number,
+                lock_reason: process.env.LOCK_REASON,
+              });
+            }
