@@ -5,21 +5,20 @@ on:
     inputs:
       checks:
         description: >
-          JSON array of { "name": string, "regex": string } objects. "regex" is a
-          JS RegExp source, matched case-insensitively against each trimmed line.
-          Defaults to the standard ldtteam template checklist.
+          JSON array of { name, regex } objects; regex is matched
+          case-insensitively against each trimmed line of the PR body.
         required: false
         type: string
         default: |
           [
-            { "name": "The `# Checklist` header",
+            { "name": "Checklist header",
               "regex": "^#+\\s*Checklist\\s*$" },
-            { "name": "The \"I have read and accept the Contributing guidelines\" checklist item",
-              "regex": "^-\\s*\\[[ xX]?\\]\\s*I have read and accept the \\[Contributing guidelines\\]" },
-            { "name": "The \"I have tested and confirmed my changes are working on the most recent commit of this pull request\" checklist item",
-              "regex": "^-\\s*\\[[ xX]?\\]\\s*I have tested and confirmed my changes are working on the most recent commit of this pull request$" },
-            { "name": "The \"I have used AI in the creation of this pull request\" checklist item",
-              "regex": "^-\\s*\\[[ xX]?\\]\\s*I have used AI in the creation of this pull request" }
+            { "name": "Contributing guidelines checklist item",
+              "regex": "^-\\s*\\[[ xX]*\\]\\s*I have read and accept the \\[Contributing guidelines\\]" },
+            { "name": "Tested changes checklist item",
+              "regex": "^-\\s*\\[[ xX]*\\]\\s*I have tested and confirmed my changes are working on the most recent commit of this pull request$" },
+            { "name": "AI disclosure checklist item",
+              "regex": "^-\\s*\\[[ xX]*\\]\\s*I have used AI in the creation of this pull request" }
           ]
       comment:
         description: Post a comment listing the missing parts on failure.
@@ -27,17 +26,14 @@ on:
         type: boolean
         default: true
       template-url:
-        description: >
-          Link to the pull request template shown in the failure comment.
-          Override this in repos that ship their own template.
+        description: Template link shown in the failure comment.
         required: false
         type: string
         default: 'https://github.com/ldtteam/.github/blob/master/.github/PULL_REQUEST_TEMPLATE'
       comment-body:
         description: >
-          Markdown for the failure comment. The token {{missing}} is replaced with
-          a bullet list of the failed check names, and {{template}} with the
-          template URL.
+          Failure comment markdown. {{missing}} expands to the failed check
+          names, {{template}} to template-url.
         required: false
         type: string
         default: |
